@@ -1,0 +1,27 @@
+node_modules/
+.chrome-temp/
+# cartridge ROMs, Intellivision system ROMs and anything assembled from them stay local
+*.a26
+*.bin
+*.rom
+*.cfg
+rom/
+tools/dasm/
+tools/build/
+tools/out/
+# third-party emulators and their downloads
+external/
+jzintv-*/
+jzintv-*.zip
+jzintv_homepage.html
+# manual scans and loose reference/AI images in the root
+manual_pages/
+/*.png
+/*.gif
+# Stella working folders
+**/stella_*basedir/
+__pycache__/
+# the earlier port, kept locally only: its disassemblies, generated tables,
+# traces and memory dumps carry the cartridges' bytes
+archive_old_port/
+.hermes/

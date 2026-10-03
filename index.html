@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070b04">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pitfall!">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <title>Pitfall! — Activision, 1982</title>
+  <meta name="description" content="David Crane's Pitfall! for the Atari 2600, translated from the original cartridge instruction by instruction and checked against the real ROM frame by frame.">
+  <link rel="icon" href="img/icon-192.png">
+  <style>
+    /* Same landing-page system as the Dracula, River Raid, Donkey Kong, Adventure and Berzerk ports, in Pitfall!'s TIA colors. */
+    :root {
+      --lp-night: #070b04;
+      --lp-panel: #121a0c;
+      --lp-panel-2: #0c1208;
+      --lp-line: #24341a;
+      --lp-line-2: #354c26;
+      --lp-ink: #eef2e4;
+      --lp-ink-2: #b8c4a2;
+      --lp-ink-3: #7a8a64;
+      --lp-accent: #bbbb35;    /* the jungle floor, TIA $18 */
+      --lp-accent-2: #d0d05a;
+      --lp-leaves: #6e9c42;    /* TIA $D6 */
+      --lp-canopy: #355f18;    /* TIA $D2 */
+      --lp-link: #d6d66a;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(120% 70% at 50% -10%, #23401a 0%, transparent 60%), var(--lp-night);
+      color: var(--lp-ink-2);
+      font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    main { width: min(1120px, 100%); }
+    code, kbd { font-family: ui-monospace, "Cascadia Mono", "Courier New", monospace; }
+    code { color: var(--lp-ink); }
+    a { color: var(--lp-link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--lp-accent); outline-offset: 3px; }
+    kbd {
+      display: inline-block; min-width: 1.5em; padding: 1px 6px; text-align: center;
+      border: 1px solid #4a5e34; border-bottom-width: 3px; border-radius: 5px;
+      background: #18240f; color: var(--lp-ink); font-size: 11px; line-height: 1.5;
+    }
+
+    .lp-hero { padding: 40px 0 26px; text-align: center; }
+    .lp-vine { margin: 0 auto 24px; max-width: 460px; height: 20px; opacity: 0.9;
+      background: radial-gradient(ellipse at 50% 0%, transparent 62%, var(--lp-accent) 64%, var(--lp-accent) 70%, transparent 72%) center / 100% 40px no-repeat; }
+    .lp-hero h1 {
+      font-size: clamp(36px, 10vw, 88px); line-height: 0.95; margin: 0; color: #fff; font-weight: 800;
+      letter-spacing: clamp(2px, 1.2vw, 12px); text-transform: uppercase; text-indent: clamp(2px, 1.2vw, 12px);
+      text-shadow: 0 2px 0 #355f18, 0 0 46px rgba(187, 187, 53, 0.45);
+    }
+    .lp-hero .lp-year { margin-top: 14px; font-size: 11px; letter-spacing: 5px; text-transform: uppercase; color: var(--lp-ink-3); }
+    .lp-hero .lp-sub { margin: 18px auto 0; max-width: 620px; font-size: 16px; line-height: 1.6; }
+    .lp-hero .lp-sub b { color: var(--lp-ink); font-weight: 600; }
+    .lp-cta { display: flex; justify-content: center; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+    .lp-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px;
+      font-weight: 600; font-size: 14px; border: 1px solid var(--lp-line-2); background: var(--lp-panel);
+      color: var(--lp-ink); cursor: pointer; font-family: inherit; transition: transform 0.12s, background 0.12s, border-color 0.12s;
+    }
+    .lp-btn:hover { transform: translateY(-1px); border-color: #5e7a40; text-decoration: none; }
+    .lp-btn.primary { background: var(--lp-accent); border-color: #7a7a20; color: #141a08; }
+    .lp-btn.primary:hover { background: var(--lp-accent-2); }
+
+    .canvas-shell {
+      width: min(760px, 100%); margin: 0 auto; padding: 18px; border: 1px solid #2a3c1c; border-radius: 20px;
+      background: linear-gradient(180deg, #18240f 0%, #080c05 100%);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    /* Full screen: the game and its touch controls fill the screen. Uses the
+       browser's fullscreen where allowed; iPhone Safari only lets video go
+       fullscreen, so there the page does it with fixed positioning. */
+    .fs-exit { display: none; }
+    body.fs { overflow: hidden; }
+    body.fs main > :not(#play):not(#tc) { display: none; }
+    body.fs #play {
+      position: fixed; inset: 0; z-index: 10; width: auto; margin: 0; border: 0; border-radius: 0; box-shadow: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+      background: var(--lp-night);
+    }
+    body.fs .tv { width: min(100%, calc((100dvh - 60px) * 640 / 384)); }
+    body.fs .fs-exit {
+      display: block; position: absolute; z-index: 12; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
+      font: 11px ui-monospace, "Cascadia Mono", monospace; padding: 6px 11px; border-radius: 8px;
+      border: 1px solid var(--lp-line-2); background: rgba(10, 16, 6, 0.85); color: var(--lp-ink); cursor: pointer;
+    }
+    body.fs #tc {
+      position: fixed; z-index: 11; left: 0; right: 0; bottom: 0; width: auto; margin: 0;
+      padding: 12px max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    }
+    @media (pointer: coarse) and (orientation: portrait) {
+      body.fs .tv { width: min(100%, calc((100dvh - 260px) * 640 / 384)); }
+    }
+    @media (pointer: coarse) and (orientation: landscape) {
+      body.fs .tv { width: min(calc(100% - 250px), calc((100dvh - 30px) * 640 / 384)); }
+      body.fs #status-line { display: none; }
+      body.fs #tc { pointer-events: none; }
+      body.fs #tc button { pointer-events: auto; opacity: 0.8; }
+      body.fs .dpad { grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 40px); }
+      body.fs .fire { width: 76px; height: 76px; }
+    }
+    .tv { position: relative; }
+    .tv canvas, .poster img {
+      display: block; width: 100%; height: auto; aspect-ratio: 640 / 384;
+      image-rendering: pixelated; image-rendering: crisp-edges;
+    }
+    .tv canvas { border-radius: 6px; border: 1px solid #000; box-shadow: 0 0 0 2px #24341a, inset 0 0 40px rgba(0, 0, 0, 0.8); background: #000; outline: none; }
+    .tv canvas:focus-visible { box-shadow: 0 0 0 2px var(--lp-accent); }
+    .poster { position: absolute; inset: 0; display: grid; place-items: center; }
+    .poster[hidden] { display: none; }
+    .poster img { position: absolute; inset: 0; height: 100%; border-radius: 6px; }
+    .poster .lp-btn { position: relative; font-size: 16px; padding: 13px 26px; box-shadow: 0 14px 30px -6px #000; }
+    #status-line { margin-top: 14px; font-size: 10px; color: var(--lp-ink-3); letter-spacing: 1px; text-align: center; line-height: 1.9; text-transform: uppercase; font-family: ui-monospace, "Cascadia Mono", "Courier New", monospace; }
+
+    #tc { display: none; justify-content: space-between; align-items: center; width: 340px; max-width: 100%; margin: 14px auto 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 48px); gap: 4px; }
+    .dpad button, .fire { font: 700 18px/1 ui-sans-serif, system-ui, sans-serif; color: var(--lp-ink); background: var(--lp-panel); border: 1px solid var(--lp-line-2); border-radius: 8px; touch-action: none; }
+    .dpad [data-hold="up"] { grid-area: 1 / 2; }
+    .dpad [data-hold="left"] { grid-area: 2 / 1; }
+    .dpad [data-hold="right"] { grid-area: 2 / 3; }
+    .dpad [data-hold="down"] { grid-area: 3 / 2; }
+    .fire { width: 92px; height: 92px; border-radius: 50%; background: #bbbb35; border-color: #7a7a20; color: #141a08; color: #fff; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+    @media (pointer: coarse) { #tc { display: flex; } }
+
+    .lp-tray { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; width: min(760px, 100%); margin: 14px auto 0; padding: 0 4px; font-size: 12px; color: var(--lp-ink-3); }
+    .lp-tray .switches { display: flex; flex-wrap: wrap; gap: 8px; }
+    .lp-tray button { font: 11px ui-monospace, "Cascadia Mono", "Courier New", monospace; padding: 5px 11px; border-radius: 8px; border: 1px solid var(--lp-line); background: var(--lp-panel); color: var(--lp-ink-2); cursor: pointer; }
+    .lp-tray button:hover { border-color: var(--lp-line-2); color: var(--lp-ink); }
+    .lp-tray button[aria-pressed="true"] { color: var(--lp-accent); border-color: #7a7a20; }
+
+    .panel.lp { width: min(1000px, 100%); margin: 44px auto 0; padding: 26px clamp(16px, 3vw, 30px); border: 1px solid var(--lp-line); border-radius: 16px; background: linear-gradient(180deg, var(--lp-panel) 0%, var(--lp-panel-2) 100%); }
+    .panel.lp h2 { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--lp-accent); margin: 0 0 10px; }
+    .panel.lp > p.lp-lead { font-size: 15px; line-height: 1.65; margin: 0 0 20px; max-width: 70ch; }
+    .panel.lp p.lp-lead b { color: var(--lp-ink); font-weight: 600; }
+    .lp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .lp-card { padding: 18px; border: 1px solid var(--lp-line); border-radius: 12px; background: rgba(255, 255, 255, 0.016); min-width: 0; }
+    .lp-card h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font-size: 14px; color: var(--lp-ink); font-weight: 600; letter-spacing: 0.02em; }
+    .lp-card h3 .pts { margin-left: auto; font: 600 12px/1 ui-monospace, "Cascadia Mono", monospace; color: var(--lp-accent); }
+    .lp-card p { font-size: 13.5px; line-height: 1.6; margin: 0 0 9px; }
+    .lp-card p:last-child { margin-bottom: 0; }
+    .lp-card b { color: var(--lp-ink); font-weight: 600; }
+    .lp-card .plate { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; min-height: 110px; padding: 10px; margin: -4px 0 14px; border-radius: 8px; background: #000; }
+    .lp-card .plate img { image-rendering: pixelated; max-width: 100%; max-height: 120px; width: auto; }
+    ul.lp-keys { list-style: none; margin: 0; padding: 0; }
+    ul.lp-keys li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; }
+    ul.lp-keys li:first-child { border-top: 0; }
+    ul.lp-keys li > span:last-child { text-align: right; flex: 0 0 auto; }
+    .lp-aside { margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--lp-accent); background: rgba(187, 187, 53, 0.07); border-radius: 0 10px 10px 0; font-size: 13.5px; line-height: 1.6; }
+    .lp-aside b { color: var(--lp-ink); }
+    .lp-aside ul { margin: 8px 0 0 18px; }
+    .lp-aside li { margin: 4px 0; }
+
+    .screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+    .screens figure { margin: 0; }
+    .screens img { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--lp-line); image-rendering: pixelated; }
+    .screens figcaption { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--lp-ink-3); }
+
+    .lp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 4px; }
+    .lp-stat { padding: 16px; border: 1px solid var(--lp-line); border-radius: 12px; text-align: center; background: rgba(255, 255, 255, 0.016); }
+    .lp-stat .n { display: block; font-size: 30px; line-height: 1.1; font-weight: 700; color: var(--lp-accent); font-family: ui-monospace, "Cascadia Mono", "Courier New", monospace; font-variant-numeric: tabular-nums; }
+    .lp-stat .t { display: block; margin-top: 7px; font-size: 12px; line-height: 1.45; color: var(--lp-ink-3); }
+
+    details.lp-dev { width: min(1000px, 100%); margin: 0 auto; }
+    details.lp-dev > summary { cursor: pointer; list-style: none; margin-top: 40px; padding: 13px 16px; border: 1px solid var(--lp-line); border-radius: 12px; background: var(--lp-panel-2); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--lp-ink-3); font-family: ui-monospace, "Cascadia Mono", "Courier New", monospace; }
+    details.lp-dev > summary::-webkit-details-marker { display: none; }
+    details.lp-dev > summary:hover { color: var(--lp-ink-2); border-color: var(--lp-line-2); }
+    details.lp-dev ul { list-style: none; padding: 16px 4px 0; display: grid; gap: 8px; font-size: 13px; }
+
+    .lp-foot { width: min(1000px, 100%); margin: 40px auto 0; padding: 22px 4px 56px; border-top: 1px solid var(--lp-line); font-size: 12px; line-height: 1.6; color: var(--lp-ink-3); display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; }
+    .lp-foot p { max-width: 70ch; }
+
+    @media (max-width: 640px) {
+      .panel.lp { margin-top: 28px; padding: 20px 16px; }
+      .lp-hero { padding: 28px 0 18px; }
+      .lp-hero .lp-sub { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="lp-hero">
+    <div class="lp-vine" aria-hidden="true"></div>
+    <h1>Pitfall!</h1>
+    <div class="lp-year">Activision · Atari 2600 · 1982</div>
+    <p class="lp-sub">David Crane's jungle run: twenty minutes, 255 scenes and 32 treasures, from a 4K cartridge. The cartridge's own program, <b>translated into JavaScript one instruction at a time</b> with every cycle counted, so every vine, crocodile and rolling log behaves exactly as on the console.</p>
+    <div class="lp-cta">
+      <a class="lp-btn primary" href="#play">Play now</a>
+      <a class="lp-btn" href="#how">Controls</a>
+      <a class="lp-btn" href="#rom">How it was built</a>
+    </div>
+  </header>
+
+  <div id="play" class="canvas-shell">
+    <div class="tv">
+      <canvas width="640" height="384" tabindex="0" aria-label="Pitfall! Arrow keys or WASD to run and climb, Space or Z to jump, Enter for Game Reset."></canvas>
+      <div class="poster" data-poster>
+        <img src="img/start.png" alt="The first scene of Pitfall!: Harry at the left of the jungle, a hole with a ladder down to the tunnel, a log, a brick wall underground, the score 2000 and the clock at 20:00." width="640" height="384">
+        <button class="lp-btn primary" type="button" data-play>Play Pitfall!</button>
+      </div>
+    </div>
+    <div id="status-line" data-hint aria-live="polite">Press Play, then move the joystick to start the clock</div>
+    <button type="button" class="fs-exit" data-exit>Exit full screen</button>
+  </div>
+  <div id="tc" aria-label="Touch controls">
+    <div class="dpad">
+      <button type="button" data-hold="up" aria-label="Up">▲</button>
+      <button type="button" data-hold="left" aria-label="Left">◀</button>
+      <button type="button" data-hold="right" aria-label="Right">▶</button>
+      <button type="button" data-hold="down" aria-label="Down">▼</button>
+    </div>
+    <button type="button" class="fire" data-hold="fire">Jump</button>
+  </div>
+  <div class="lp-tray">
+    <div><kbd>←</kbd><kbd>→</kbd> run · <kbd>↑</kbd><kbd>↓</kbd> climb · <kbd>Space</kbd> jump · <kbd>Enter</kbd> Reset</div>
+    <div class="switches">
+      <button type="button" data-reset>Game Reset</button>
+      <button type="button" data-switch="color" aria-pressed="true" title="TV type switch: pressed = color">Color</button>
+      <button type="button" data-pause>Pause</button>
+      <button type="button" data-mute aria-pressed="false">Mute</button>
+      <button type="button" id="lp-fullscreen">Fullscreen</button>
+    </div>
+  </div>
+
+  <section class="panel lp" id="how">
+    <h2>How to play</h2>
+    <p class="lp-lead">Guide Pitfall Harry through the jungle and collect <b>all 32 treasures within twenty minutes</b>. Jump the holes, logs, fire and cobras, swing over the swamps and tar pits on the vines, and hop across the crocodiles' heads. The tunnels underground are a shortcut: <b>every scene you cross down there takes you three along the surface</b>, if you can get past the scorpions and the brick walls.</p>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <h3>At the controls</h3>
+        <ul class="lp-keys">
+          <li><span>Run</span><span><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd></span></li>
+          <li><span>Climb</span><span><kbd>↑</kbd><kbd>↓</kbd> or <kbd>W</kbd><kbd>S</kbd></span></li>
+          <li><span>Jump · grab a vine</span><span><kbd>Space</kbd> / <kbd>Z</kbd></span></li>
+          <li><span>Let go of the vine</span><span><kbd>↓</kbd></span></li>
+          <li><span>Game Reset</span><span><kbd>Enter</kbd></span></li>
+          <li><span>Pause · Mute</span><span><kbd>P</kbd> · <kbd>M</kbd></span></li>
+        </ul>
+        <p style="margin-top: 12px">Gamepads work too: any face button jumps, Start is Game Reset, Back pauses.</p>
+      </div>
+      <div class="lp-card">
+        <h3>Score and time</h3>
+        <p>You start with <b>2,000 points</b> and three lives, and the clock starts at 20:00 with your first step. Each treasure is worth <b>2,000 to 5,000</b> points; falling down a hole costs 100.</p>
+        <p>The game ends when the clock runs out, when Harry has no lives left, or when the last of the 32 treasures is found.</p>
+      </div>
+      <div class="lp-card">
+        <h3>The same jungle every time</h3>
+        <p>Every game starts in the same scene. Each of the 255 scenes is built from a single number, and walking left or right steps that number backwards or forwards, so the jungle never changes and you can learn the way.</p>
+      </div>
+    </div>
+    <div class="screens">
+      <figure><img src="img/scene-croco.png" alt="A swamp with three crocodiles." width="640" height="384"><figcaption>Crocodiles: their heads are safe to stand on while their jaws are shut.</figcaption></figure>
+      <figure><img src="img/scene-treasure.png" alt="A tar pit with a gold bar beyond it." width="640" height="384"><figcaption>A gold bar across a tar pit, with a scorpion in the tunnel below.</figcaption></figure>
+      <figure><img src="img/scene-cobra.png" alt="A tar pit, a vine and a cobra." width="640" height="384"><figcaption>A cobra past the tar pit, and a vine to swing across on.</figcaption></figure>
+      <figure><img src="img/scene-fire.png" alt="A fire on the path, and a ladder down to the tunnel." width="640" height="384"><figcaption>A fire, and a ladder down to the tunnel and its brick wall.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="panel lp" id="rom">
+    <h2>Built from the ROM</h2>
+    <p class="lp-lead">This is not an emulator, and not a remake. A translator read the cartridge's 6502 code, using Thomas Jentzsch's annotated disassembly for labels and comments, and wrote out <b>each instruction as a line of JavaScript</b> with its cycle count. The translated game runs on a model of the 2600's TIA and RIOT chips, and a 6502 core runs the real ROM beside it to prove the two match.</p>
+    <div class="lp-stats">
+      <div class="lp-stat"><span class="n">0</span><span class="t">differences from the cartridge in 100,000 compared frames: registers, cycles, RAM, chip writes and pixels</span></div>
+      <div class="lp-stat"><span class="n">1,514</span><span class="t">instructions translated, each with its cycle count</span></div>
+      <div class="lp-stat"><span class="n">255</span><span class="t">scenes, each built from one byte</span></div>
+      <div class="lp-stat"><span class="n">4,096</span><span class="t">bytes in the whole cartridge, code and graphics</span></div>
+    </div>
+    <div class="lp-aside"><b>Read in the ROM.</b> A few things the code shows, with Thomas Jentzsch's notes:
+      <ul>
+        <li>The jungle comes from a "bidirectional" random number generator: it can run backwards as well as forwards, which is what lets Harry walk both ways. The bits of each scene's number pick the ground objects, the kind of scene, the trees and which side the underground wall is on.</li>
+        <li>A treasure's value comes from its own type number: two bits, shifted and added to 2,000.</li>
+        <li>The Activision copyright at the bottom scrolls away when a game starts, and scrolls back each time Harry loses a life.</li>
+        <li>Every game starts from the same seed, <code>$C4</code>.</li>
+        <li>Leaving a scene underground runs the generator three times instead of once; that is the whole tunnel shortcut.</li>
+      </ul>
+      The port keeps all of it, because that is the game.</div>
+  </section>
+
+  <details class="lp-dev">
+    <summary>Developer pages</summary>
+    <ul>
+      <li><a href="game.html">Game only</a>: the player on a page of its own</li>
+      <li><a href="https://github.com/Plicerin/pitfall-rom-port#verify-against-the-rom">Verifying against the ROM</a>: the translator, the 6502 oracle and the comparison scripts</li>
+    </ul>
+  </details>
+
+  <footer class="lp-foot">
+    <p><i>Pitfall!</i> is © 1982 Activision, designed and programmed by David Crane. An unofficial preservation project, not affiliated with Activision. Built with Thomas Jentzsch's annotated disassembly; colors from Stella's NTSC palette. The ROM file is not included.</p>
+    <a href="https://github.com/Plicerin/pitfall-rom-port">Source on GitHub</a>
+  </footer>
+</main>
+
+<script type="module">
+  import { mountPlayer } from './src/pitfallPlayer.mjs';
+  const shell = document.getElementById('play');
+  window.__pitfall = mountPlayer(shell.parentElement);
+  // full screen: the browser's own where allowed (desktop, Android, iPad), and
+  // the same layout without it on iPhone, where only video may go fullscreen
+  const root = document.documentElement;
+  const nativeElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const canNative = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const setFull = (on) => {
+    document.body.classList.toggle('fs', on);
+    shell.querySelector('canvas').focus({ preventScroll: true });
+  };
+  const enter = () => {
+    setFull(true);
+    if (canNative) (root.requestFullscreen || root.webkitRequestFullscreen)?.call(root)?.catch?.(() => {});
+  };
+  const leave = () => {
+    if (nativeElement()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    setFull(false);
+  };
+  document.getElementById('lp-fullscreen').addEventListener('click', () => (document.body.classList.contains('fs') ? leave() : enter()));
+  shell.querySelector('[data-exit]').addEventListener('click', leave);
+  for (const event of ['fullscreenchange', 'webkitfullscreenchange']) {
+    document.addEventListener(event, () => { if (!nativeElement()) setFull(false); });
+  }
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && document.body.classList.contains('fs') && !nativeElement()) leave(); });
+</script>
+</body>
+</html>
